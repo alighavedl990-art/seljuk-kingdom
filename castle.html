@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#16254a"><title>قلعه‌داران سلجوقی</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#12203f;color:#efdcae;font-family:Vazirmatn,Tahoma,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#c{position:fixed;left:0;top:0;width:100%;height:100%}
+#top{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 6px) 6px 0;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
+.chip{background:rgba(22,37,74,.92);border:1px solid #3c5088;border-radius:8px;padding:3px 8px;font-size:13px;font-weight:700}
+#dock{position:fixed;left:0;right:0;bottom:0;padding:0 6px calc(env(safe-area-inset-bottom) + 6px);display:flex;flex-direction:column;gap:6px}
+.box{background:rgba(22,37,74,.95);border:1px solid #3c5088;border-radius:12px;padding:8px 10px;font-size:14px;line-height:1.7}
+.row{display:flex;gap:6px;overflow-x:auto;touch-action:pan-x}
+button{flex:0 0 auto;font:inherit;font-weight:700;font-size:13px;color:#efdcae;background:#16254a;border:1px solid #3c5088;border-radius:10px;padding:7px 10px;line-height:1.4}
+button:active{background:#25396e}button.on{border-color:#e0a82e;background:#3a3a1e}
+button.go{background:#1f9aa0;border-color:#6fd0d4;color:#fff}button.dn{background:#b5532f;border-color:#e07a52;color:#fff}
+</style></head><body>
+<canvas id="c"></canvas><div id="top"></div><div id="dock"></div>
+<script>
+const $=i=>document.getElementById(i),fa=n=>Math.floor(n).toLocaleString('fa-IR'),G=16;
+// نام، هزینه طلا، رنگ
+const BD={mine:['معدن طلا',50,'#d9a82e'],farm:['مزرعه',40,'#7aa83a'],store:['انبار',60,'#a98c63'],bar:['پادگان',80,'#9a3b2d'],tower:['برج دفاعی',100,'#6c6f7a']};
+// نام، هزینه غذا، جان، آسیب بر ثانیه، برد، رنگ، سرعت
+const TR={sw:['شمشیرزن',20,60,8,1.1,'#d9534f',1.8],ar:['کماندار',30,30,7,4,'#3cb371',1.5],tk:['سپردار',50,220,6,1.1,'#5d7a99',1.2]};
+let S,Bt=null,sel=null,mode='v',BA=null,dep='sw',W,H,T,ox,oy,last=performance.now(),sv=0,hv=0;
+const fresh=()=>({gold:300,food:200,b:[{t:'mine',x:3,y:3,l:1,a:0},{t:'farm',x:11,y:3,l:1,a:0},{t:'store',x:3,y:11,l:1},{t:'bar',x:11,y:11,l:1},{t:'tower',x:5,y:7,l:1}],army:{sw:0,ar:0,tk:0},raid:300,wins:0,tro:0,log:'به قلعه خود خوش آمدید. ساختمان بسازید و لشکر آماده کنید.'});
+try{S=JSON.parse(localStorage.getItem('castle1'))}catch(e){}if(!S||!S.b)S=fresh();
+const save=()=>{try{localStorage.setItem('castle1',JSON.stringify(S))}catch(e){}};
+const sum=t=>S.b.filter(b=>b.t==t).reduce((s,b)=>s+b.l,0),cap=()=>500+500*sum('store'),acap=()=>10*sum('bar'),used=()=>S.army.sw+S.army.ar+S.army.tk;
+const inHall=(x,y)=>x>=7&&x<=8&&y>=7&&y<=8,at=(x,y)=>S.b.find(b=>b.x==x&&b.y==y);
+function msg(t){S.log=t;ui()}
+// ---- دهکده ----
+function tap(x,y){if(x<0||y<0||x>=G||y>=G)return;
+ if(mode=='b'){if(x<1||y<1||x>=G-1||y>=G-1)return msg('سربازها را از کناره‌های نقشه پیاده کنید.');if(!BA.army[dep])return msg('از این سرباز نمانده است.');BA.army[dep]--;BA.tr.push({k:dep,x:x+.5,y:y+.5,hp:TR[dep][2],mh:TR[dep][2]});return ui()}
+ if(inHall(x,y)){sel=null;return msg('تالار قلعه: مرکز پادشاهی شما.')}
+ const b=at(x,y);
+ if(b){sel=b;if(b.a>=1&&(b.t=='mine'||b.t=='farm')){const k=b.t=='mine'?'gold':'food',g=Math.min(Math.floor(b.a),cap()-S[k]);if(g<=0)msg('انبار پر است؛ انبار بسازید یا ارتقا دهید.');else{S[k]+=g;b.a-=g;S.log='جمع شد: '+fa(g)+(k=='gold'?' طلا':' غذا')}}ui();return}
+ sel=null;if(Bt){const c=BD[Bt][1];if(S.gold<c)return msg('طلا کافی نیست ('+fa(c)+' لازم است).');S.gold-=c;S.b.push({t:Bt,x,y,l:1,a:0});S.log=BD[Bt][0]+' ساخته شد.';save()}ui()}
+function upg(){const b=sel;if(!b||b.l>=3)return;const c=BD[b.t][1]*(b.l+1);if(S.gold<c)return msg('طلا کافی نیست ('+fa(c)+' لازم است).');S.gold-=c;b.l++;msg(BD[b.t][0]+' به سطح '+fa(b.l)+' رسید.');save()}
+function del(){S.b=S.b.filter(b=>b!==sel);S.gold+=Math.floor(BD[sel.t][1]/2);sel=null;msg('تخریب شد و نصف هزینه برگشت.');save()}
+function train(k){if(used()>=acap())return msg('ظرفیت پادگان پر است؛ پادگان بسازید یا ارتقا دهید.');if(S.food<TR[k][1])return msg('غذا کافی نیست.');S.food-=TR[k][1];S.army[k]++;msg(TR[k][0]+' آماده شد.');save()}
+// ---- نبرد ----
+function attack(){if(!used())return msg('اول سرباز آموزش دهید.');const L=S.wins+1,hp=300+80*L,bs=[{t:'hall',x:7,y:7,w:2,hp,mh:hp}],tk=new Set(['7,7','8,7','7,8','8,8']);
+ const ty=['tower','mine','farm','store','store'],n=5+L+Math.floor(L/2);
+ for(let i=0;i<n;i++){let x,y;do{x=1+Math.random()*14|0;y=1+Math.random()*14|0}while(tk.has(x+','+y));tk.add(x+','+y);const t=i<1+Math.floor(L/2)?'tower':ty[1+i%4],h=(t=='tower'?160:100)+20*L;bs.push({t,x,y,l:1,hp:h,mh:h})}
+ BA={bs,tr:[],t:120,army:{...S.army},lG:200+120*L,lF:150+80*L,L};S.army={sw:0,ar:0,tk:0};dep=BA.army.sw?'sw':BA.army.ar?'ar':'tk';mode='b';sel=null;Bt=null;S.log='نبرد! از کناره‌های نقشه سرباز پیاده کنید.';ui()}
+function endB(){const bs=BA.bs,d=bs.filter(b=>b.hp<=0).length,p=d/bs.length,hd=bs[0].hp<=0,win=p>=.5||hd;
+ const g=Math.min(Math.floor(BA.lG*p),cap()-S.gold),f=Math.min(Math.floor(BA.lF*p),cap()-S.food);S.gold+=Math.max(0,g);S.food+=Math.max(0,f);
+ BA.tr.forEach(u=>BA.army[u.k]++);for(const k in BA.army)S.army[k]=Math.min(BA.army[k],99);
+ if(win){S.wins++;S.tro+=20}else S.tro=Math.max(0,S.tro-10);
+ S.log=(win?'پیروزی! ':'شکست. ')+fa(p*100)+'٪ ویران شد. غنیمت: '+fa(g)+' طلا و '+fa(f)+' غذا.';mode='v';BA=null;save();ui()}
+function sim(dt){BA.t-=dt;const alive=BA.bs.filter(b=>b.hp>0);
+ BA.tr.forEach(u=>{const d=TR[u.k];let tb=null,bd=1e9;alive.forEach(b=>{const w=(b.w||1)/2,q=Math.hypot(b.x+w-u.x,b.y+w-u.y);if(q<bd){bd=q;tb=b}});u.fx=null;if(!tb)return;const w=(tb.w||1)/2,bx=tb.x+w,by=tb.y+w;
+  if(bd<=d[4]+w){tb.hp-=d[3]*dt;u.fx=[bx,by]}else{u.x+=(bx-u.x)/bd*d[5]*.0+(bx-u.x)/bd*d[6]*dt;u.y+=(by-u.y)/bd*d[6]*dt}});
+ alive.filter(b=>b.t=='tower').forEach(b=>{let u=null,bd=4.5;BA.tr.forEach(r=>{const q=Math.hypot(b.x+.5-r.x,b.y+.5-r.y);if(q<bd){bd=q;u=r}});if(u){u.hp-=(10+2*BA.L)*dt;b.fx=[u.x,u.y]}else b.fx=null});
+ BA.tr=BA.tr.filter(u=>u.hp>0);
+ if(!alive.length||BA.t<=0||(!BA.tr.length&&!BA.army.sw&&!BA.army.ar&&!BA.army.tk))endB()}
+function raid(){S.raid=300;const st=20+S.wins*15,df=sum('tower')*30+used()*5;if(df>=st)S.log='حمله دشمن به قلعه دفع شد!';else{S.gold=Math.floor(S.gold*.75);S.food=Math.floor(S.food*.75);S.log='دشمن به قلعه زد و بخشی از منابع را برد. برج و سرباز بیشتر بسازید.'}ui()}
+// ---- رسم ----
+const cv=$('c'),cx=cv.getContext('2d');let DPR=1;
+function rs(){DPR=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;T=Math.floor(Math.min(W/G,(H-250)/G));ox=Math.floor((W-T*G)/2);oy=Math.max(48,Math.floor((H-250-T*G)/2)+48)}
+function bd(b,e){const x=ox+b.x*T,y=oy+b.y*T,w=(b.w||1)*T,c=b.t=='hall'?'#1f3c88':BD[b.t][2],m=x+w/2,n=y+w/2;
+ cx.fillStyle='rgba(0,0,0,.25)';cx.fillRect(x+2,y+3,w-2,w-2);cx.fillStyle=c;cx.fillRect(x+1,y+1,w-3,w-4);cx.fillStyle='rgba(255,255,255,.22)';cx.fillRect(x+1,y+1,w-3,Math.max(3,T/5));
+ if(b.t=='mine'){cx.fillStyle='#fff3b0';cx.beginPath();cx.arc(m,n,T*.22,0,7);cx.fill()}
+ else if(b.t=='farm'){cx.fillStyle='#3f6e1f';for(let i=0;i<3;i++)cx.fillRect(x+4,y+T*.3+i*T*.22,w-9,2)}
+ else if(b.t=='store'){cx.fillStyle='#6b5330';cx.fillRect(m-T*.2,n-T*.1,T*.4,T*.35)}
+ else if(b.t=='bar'){cx.fillStyle='#ffd34d';cx.fillRect(m-1,y+3,2,T*.6);cx.fillRect(m+1,y+3,T*.3,T*.2)}
+ else if(b.t=='tower'){cx.fillStyle='#3d4048';cx.beginPath();cx.arc(m,n,T*.28,0,7);cx.fill()}
+ else{cx.fillStyle='#e0a82e';cx.beginPath();cx.arc(m,n-2,T*.7,Math.PI,0);cx.fill()}
+ if(e){cx.strokeStyle='#e05a4a';cx.lineWidth=2;cx.strokeRect(x+1,y+1,w-3,w-4);if(b.hp<b.mh){cx.fillStyle='#300';cx.fillRect(x,y-4,w,3);cx.fillStyle='#4c4';cx.fillRect(x,y-4,w*Math.max(0,b.hp)/b.mh,3)}}
+ else{cx.fillStyle='#ffd34d';for(let i=0;i<b.l;i++)cx.fillRect(x+4+i*5,y+w-6,3,3);if(b.a>=20){cx.fillStyle=b.t=='mine'?'#ffd34d':'#9be564';cx.beginPath();cx.arc(x+w-5,y+5,4,0,7);cx.fill()}if(sel===b){cx.strokeStyle='#fff';cx.lineWidth=2;cx.strokeRect(x,y,w-1,w-2)}}}
+function draw(){cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='#12203f';cx.fillRect(0,0,W,H);
+ for(let x=0;x<G;x++)for(let y=0;y<G;y++){cx.fillStyle=(x+y)%2?'#6fa84a':'#68a044';cx.fillRect(ox+x*T,oy+y*T,T,T);if(mode=='v'&&Bt&&!at(x,y)&&!inHall(x,y)){cx.strokeStyle='rgba(255,255,255,.25)';cx.strokeRect(ox+x*T,oy+y*T,T,T)}}
+ if(mode=='b'){cx.fillStyle='rgba(255,255,255,.12)';for(let x=0;x<G;x++)for(let y=0;y<G;y++)if(x<1||y<1||x>=G-1||y>=G-1)cx.fillRect(ox+x*T,oy+y*T,T,T);BA.bs.filter(b=>b.hp>0).forEach(b=>bd(b,1));
+  BA.bs.forEach(b=>{if(b.fx&&b.hp>0){cx.strokeStyle='#f55';cx.lineWidth=1;cx.beginPath();cx.moveTo(ox+(b.x+.5)*T,oy+(b.y+.5)*T);cx.lineTo(ox+b.fx[0]*T,oy+b.fx[1]*T);cx.stroke()}});
+  BA.tr.forEach(u=>{const x=ox+u.x*T,y=oy+u.y*T;if(u.fx){cx.strokeStyle='#fff';cx.beginPath();cx.moveTo(x,y);cx.lineTo(ox+u.fx[0]*T,oy+u.fx[1]*T);cx.stroke()}cx.fillStyle=TR[u.k][5];cx.beginPath();cx.arc(x,y,T*.28,0,7);cx.fill();cx.fillStyle='#300';cx.fillRect(x-T*.3,y-T*.45,T*.6,2);cx.fillStyle='#4c4';cx.fillRect(x-T*.3,y-T*.45,T*.6*u.hp/u.mh,2)})}
+ else{bd({t:'hall',x:7,y:7,w:2});S.b.forEach(b=>bd(b,0))}}
+// ---- رابط ----
+function top(){$('top').innerHTML='<span class="chip">🪙 '+fa(S.gold)+' / '+fa(cap())+'</span><span class="chip">🌾 '+fa(S.food)+'</span><span class="chip">🏆 '+fa(S.tro)+'</span><span class="chip">⚔ '+fa(used())+' / '+fa(acap())+'</span>'+(mode=='b'?'<span class="chip">⏱ '+fa(Math.max(0,BA.t))+'</span>':'')}
+function ui(){let h='<div class="box">'+S.log+'</div>';
+ if(mode=='b')h+='<div class="row">'+Object.keys(TR).map(k=>'<button class="'+(dep==k?'on':'')+'" onclick="dep=\''+k+'\';ui()">'+TR[k][0]+' ('+fa(BA.army[k])+')</button>').join('')+'<button class="dn" onclick="endB()">پایان نبرد</button></div>';
+ else{if(sel){const c=BD[sel.t][1]*(sel.l+1);h='<div class="box">'+S.log+'</div><div class="box">'+BD[sel.t][0]+' — سطح '+fa(sel.l)+' <button onclick="sel=null;ui()">بستن</button> '+(sel.l<3?'<button class="go" onclick="upg()">ارتقا ('+fa(c)+')</button> ':'')+'<button class="dn" onclick="del()">تخریب</button></div>'}
+  h+='<div class="row">'+Object.keys(BD).map(k=>'<button class="'+(Bt==k?'on':'')+'" onclick="Bt=Bt==\''+k+'\'?null:\''+k+'\';sel=null;ui()">'+BD[k][0]+'<br>'+fa(BD[k][1])+' طلا</button>').join('')+'</div>'+
+  '<div class="row">'+Object.keys(TR).map(k=>'<button onclick="train(\''+k+'\')">'+TR[k][0]+' ('+fa(S.army[k])+')<br>'+fa(TR[k][1])+' غذا</button>').join('')+'<button class="go" onclick="attack()">⚔ حمله</button></div>'}
+ $('dock').innerHTML=h;top()}
+cv.addEventListener('pointerdown',e=>tap(Math.floor((e.clientX-ox)/T),Math.floor((e.clientY-oy)/T)));
+function loop(n){const dt=Math.min(.25,(n-last)/1000);last=n;
+ if(mode=='b')sim(dt);else{S.b.forEach(b=>{if(b.t=='mine'||b.t=='farm')b.a=Math.min(150*b.l,(b.a||0)+1.5*b.l*dt)});S.raid-=dt;if(S.raid<=0)raid()}
+ draw();hv+=dt;sv+=dt;if(hv>.3){hv=0;top()}if(sv>5){sv=0;save()}requestAnimationFrame(loop)}
+addEventListener('resize',rs);addEventListener('pagehide',save);addEventListener('visibilitychange',()=>{if(document.hidden)save()});
+rs();ui();requestAnimationFrame(loop);
+</script></body></html>

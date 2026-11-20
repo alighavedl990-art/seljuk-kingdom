@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#16254a"><title>پادشاهی سلجوقیان</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--lap:#16254a;--tur:#1f9aa0;--gold:#e0a82e;--sand:#efdcae;--brick:#b5532f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#12203f;color:var(--sand);font-family:Vazirmatn,Tahoma,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+#top{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 6px) 6px 0;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
+.chip{background:rgba(22,37,74,.88);border:1px solid #3c5088;border-radius:8px;padding:3px 8px;font-size:13px;font-weight:700}
+.chip.w{background:var(--brick);border-color:#e07a52}
+#zoom{position:fixed;left:8px;top:96px;display:flex;flex-direction:column;gap:6px}
+button{font:inherit;color:var(--sand);background:var(--lap);border:1px solid #3c5088;border-radius:10px;padding:8px 12px;font-weight:700}
+button:active{background:#25396e}
+button.go{background:var(--tur);border-color:#6fd0d4;color:#fff}
+button.dn{background:var(--brick);border-color:#e07a52;color:#fff}
+button:disabled{opacity:.45}
+#zoom button{width:42px;height:42px;padding:0;font-size:22px}
+#dock{position:fixed;left:0;right:0;bottom:0;padding:0 6px calc(env(safe-area-inset-bottom) + 6px)}
+#info{background:rgba(22,37,74,.94);border:1px solid #3c5088;border-radius:12px;padding:8px 10px;margin-bottom:6px;font-size:14px;min-height:42px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#info span.t{flex:1 1 150px;line-height:1.7}
+#bar{display:flex;gap:6px;overflow-x:auto;touch-action:pan-x;padding-bottom:2px}
+#bar button{flex:0 0 auto;text-align:center;line-height:1.35;font-size:13px}
+#bar button.on{border-color:var(--gold);background:#3a3a1e;color:#fff}
+#bar i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-left:5px;vertical-align:middle}
+#king{position:fixed;inset:0;background:rgba(8,14,30,.7);display:none;align-items:flex-end;touch-action:pan-y}
+#sheet{width:100%;max-height:88%;overflow-y:auto;background:var(--lap);border-top:3px solid var(--gold);border-radius:18px 18px 0 0;padding:14px 14px calc(env(safe-area-inset-bottom) + 18px)}
+#sheet h3{margin:14px 0 6px;font-size:15px;color:var(--gold)}
+#sheet .row{display:flex;flex-wrap:wrap;gap:6px}
+#sheet p{margin:4px 0;font-size:13px;line-height:1.8}
+.hd{display:flex;gap:12px;align-items:center}
+.hd b{font-size:18px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="top"></div>
+<div id="zoom"><button onclick="zoom(1.25)">+</button><button onclick="zoom(.8)">−</button></div>
+<div id="dock"><div id="info"></div><div id="bar"></div></div>
+<div id="king" onclick="if(event.target==this)closeK()"><div id="sheet"></div></div>
+<script>
+const $=id=>document.getElementById(id),fa=n=>Math.floor(n).toLocaleString('fa-IR');
+// نام، هزینه (طلا)، رنگ، توضیح
+const B={house:['خانه',30,'#e3b47c','هر سطح جای ۱۰ نفر'],farm:['مزرعه',25,'#a9c35a','غذا تولید می‌کند'],market:['بازار',60,'#e0a82e','تجارت و طلا؛ رضایت مردم'],mine:['معدن طلا',80,'#6a5b4d','طلا تولید می‌کند'],storage:['انبار',50,'#a98c63','ظرفیت ذخیره غذا و طلا'],barracks:['پادگان',100,'#9a3b2d','جای ۱۰ سرباز در هر سطح'],workshop:['کارگاه',70,'#7a6aa8','کالا تولید می‌کند؛ برای تجارت']};
+const HH={house:48,farm:14,market:38,mine:30,storage:38,barracks:50,workshop:34};
+const fresh=()=>({gold:150,food:120,pop:10,sol:0,tax:1,N:15,hap:70,wave:0,raid:150,starve:0,b:{'4,4':{t:'house',l:1},'5,4':{t:'farm',l:1},'4,5':{t:'farm',l:1}},goods:0,price:1,pt:20,car:null,trips:0,wins:0,m:0,clock:30,log:['به پادشاهی سلجوقیان خوش آمدید.']});
+let S,A=[],R=[],CA=null,cam={x:0,y:0,z:1},mode=null,selK=null,last=performance.now(),sv=0,hv=0;
+const road=(x,y)=>x%4==3||y%4==3,pal=(x,y)=>x>=6&&x<=8&&y>=6&&y<=8;
+const isRoad=(x,y)=>x>=0&&y>=0&&x<S.N&&y<S.N&&road(x,y)&&!pal(x,y);
+const free=(x,y)=>x>=0&&y>=0&&x<S.N&&y<S.N&&!road(x,y)&&!pal(x,y)&&!S.b[x+','+y];
+function load(){try{S=JSON.parse(localStorage.getItem('seljuk1'))}catch(e){}if(!S||!S.b)S=fresh();const f=fresh();for(const k in f)if(S[k]===undefined)S[k]=f[k];rl()}
+function save(){try{localStorage.setItem('seljuk1',JSON.stringify(S))}catch(e){}}
+function rl(){R=[];for(let x=0;x<S.N;x++)for(let y=0;y<S.N;y++)if(isRoad(x,y))R.push([x,y])}
+function stats(){const r={house:0,farm:0,market:0,mine:0,storage:0,barracks:0,workshop:0};for(const k in S.b)r[S.b[k].t]+=S.b[k].l;return r}
+const capH=()=>10*stats().house,capS=()=>10*stats().barracks,capR=()=>300+300*stats().storage,def=()=>3+S.sol*(1+.25*stats().barracks);
+function msg(t){S.log.unshift(t);S.log.length=Math.min(S.log.length,8);info()}
+// ---- منطق بازی ----
+function tick(dt){const r=stats(),cap=capR(),m=S.hap<30?.5:1,tx=[0,.02,.05,.09][S.tax];
+ S.food+=(r.farm*1.5*m-S.pop*.08-S.sol*.04)*dt;
+ S.gold+=(r.mine*2.5*m+r.market*(1+S.pop/20)*.6*m+S.pop*tx-S.sol*.1)*dt;
+ S.food=Math.min(S.food,cap);S.gold=Math.min(Math.max(S.gold,0),cap);
+ if(S.food<=0){S.food=0;S.starve+=dt;if(S.starve>=6){S.starve=0;if(S.pop>0){S.pop--;S.sol=Math.min(S.sol,S.pop);msg('قحطی! یک نفر شهر را ترک کرد.')}}}else S.starve=0;
+ const tg=75-S.tax*12+Math.min(15,r.market*5)-(S.food<=0?40:0)-(S.pop>capH()?20:0);S.hap=Math.max(0,Math.min(100,S.hap+(tg-S.hap)*.1*dt));
+ S.goods=Math.min(cap,S.goods+r.workshop*.8*m*dt);S.clock+=dt;S.pt-=dt;if(S.pt<=0){S.pt=20;S.price=Math.max(.6,Math.min(1.8,S.price+(Math.random()-.5)*.6))}
+ if(S.car){S.car.t-=dt;if(S.car.t<=0){const c=S.car;S.car=null;CA=null;if(Math.random()<.15)msg('کاروان تجاری غارت شد!');else{const g=Math.floor(c.g*4*c.p*(1+.1*r.market));S.gold=Math.min(cap,S.gold+g);S.trips++;msg('کاروان برگشت! سود: '+fa(g)+' طلا.')}}}
+ mis();S.raid-=dt;if(S.raid<=0)raid();
+ const nc=Math.min(14,Math.ceil(S.pop/10)*2),ns=Math.min(8,Math.ceil(S.sol/3));
+ let P1=A.filter(a=>!a.s),P2=A.filter(a=>a.s);
+ if(R.length){while(P1.length<nc)P1.push(mk(0));while(P2.length<ns)P2.push(mk(1))}
+ P1.length=Math.min(P1.length,nc);P2.length=Math.min(P2.length,ns);A=P1.concat(P2);A.forEach(a=>walk(a,dt));if(S.car&&!CA&&R.length){CA=mk(0);CA.c='#8a5a2b'}if(CA)walk(CA,dt)}
+function raid(){S.wave++;S.raid=120;const st=4+S.wave*5,d=def();
+ if(d>=st){S.wins++;const g=15*S.wave;S.gold+=g;S.sol=Math.max(0,S.sol-Math.floor(st/8));msg('دشمن را شکست دادید! غنیمت: '+fa(g)+' طلا.')}
+ else{S.gold*=.7;S.food*=.7;S.sol=Math.floor(S.sol/2);S.pop=Math.floor(S.pop*.9);S.hap=Math.max(0,S.hap-20);msg('دشمن به شهر زد! بخشی از منابع و مردم از دست رفت. سرباز بیشتر بگیرید.')}}
+const M=[['ساخت یک بازار',s=>stats().market>0,40],['رسیدن به ۳۰ نفر جمعیت',s=>s.pop>=30,60],['داشتن ۵ سرباز',s=>s.sol>=5,80],['ساخت یک کارگاه',s=>stats().workshop>0,50],['فرستادن اولین کاروان تجاری',s=>s.trips>0,100],['رسیدن به ۶۰ نفر جمعیت',s=>s.pop>=60,120],['شکست دادن یک حمله دشمن',s=>s.wins>0,150],['گسترش نقشه',s=>s.N>=19,200]];
+function mis(){const m=M[S.m];if(m&&m[1](S)){S.gold+=m[2];S.m++;msg('ماموریت انجام شد: «'+m[0]+'» — پاداش '+fa(m[2])+' طلا.');save()}}
+function sendCar(){if(S.car)return msg('کاروان در راه است.');if(!stats().market)return msg('برای تجارت یک بازار لازم است.');const g=Math.floor(S.goods);if(g<10)return msg('حداقل ۱۰ کالا لازم است (کارگاه بسازید).');S.goods-=g;S.car={t:30,g,p:S.price};msg('کاروان با '+fa(g)+' کالا حرکت کرد.');save()}
+function build(x,y,t){const c=B[t][1];if(!free(x,y))return msg('این زمین پر یا خیابان است.');if(S.gold<c)return msg('طلا کافی نیست ('+fa(c)+' لازم است).');
+ S.gold-=c;S.b[x+','+y]={t,l:1};msg(B[t][0]+' ساخته شد.');save()}
+function upg(){const b=S.b[selK];if(!b)return;const c=B[b.t][1]*(b.l+1);if(b.l>=3)return msg('بالاترین سطح است.');if(S.gold<c)return msg('طلا کافی نیست ('+fa(c)+' لازم است).');S.gold-=c;b.l++;msg(B[b.t][0]+' به سطح '+fa(b.l)+' رسید.');save()}
+function del(){const b=S.b[selK];if(!b)return;let n=0;for(let i=1;i<=b.l;i++)n+=B[b.t][1]*(i>1?i:1);S.gold+=Math.floor(n/2);delete S.b[selK];selK=null;msg('ساختمان تخریب شد و نصف هزینه برگشت.');save()}
+function recruit(){if(S.food<10)return msg('غذا کافی نیست (۱۰ غذا لازم است).');
+ if(S.pop+10>capH()){let f=null;for(let x=0;x<S.N&&!f;x++)for(let y=0;y<S.N&&!f;y++)if(free(x,y))f=[x,y];
+  if(!f)return msg('جایی برای خانه نیست؛ نقشه را گسترش دهید.');if(S.gold<B.house[1])return msg('برای خانه جدید '+fa(B.house[1])+' طلا لازم است.');
+  S.gold-=B.house[1];S.b[f[0]+','+f[1]]={t:'house',l:1};msg('خانه جدید ساخته شد.')}
+ S.food-=10;S.pop+=10;msg('۱۰ نفر جدید در شهر اسکان یافتند.');save()}
+function like(){S.food=Math.min(capR(),S.food+5);msg('یک لایک = ۵ غذا. غذا اضافه شد.');save()}
+function train(){const n=5;if(S.sol+n>capS())return msg('ظرفیت پادگان پر است؛ پادگان بسازید یا ارتقا دهید.');if(S.sol+n>S.pop)return msg('مردم کافی نیست.');if(S.gold<8*n||S.food<3*n)return msg('منابع کافی نیست (۴۰ طلا و ۱۵ غذا).');
+ S.gold-=8*n;S.food-=3*n;S.sol+=n;msg('۵ سرباز استخدام شد.');save()}
+function expand(){if(S.N>=23)return msg('نقشه به بیشترین اندازه رسیده است.');if(S.gold<250)return msg('گسترش نقشه ۲۵۰ طلا لازم دارد.');S.gold-=250;S.N+=4;rl();msg('نقشه گسترش یافت.');save()}
+// ---- مردم ----
+function mk(s){const r=R[Math.random()*R.length|0];return{x:r[0]+.5,y:r[1]+.5,tx:r[0],ty:r[1],px:-1,py:-1,s,c:s?'#b8322a':['#2a6f97','#8a5a9e','#3a8f5c','#c9772e','#e8e0c8'][Math.random()*5|0]}}
+function walk(a,dt){const dx=a.tx+.5-a.x,dy=a.ty+.5-a.y,d=Math.hypot(dx,dy),v=(a.s?1.1:.7)*dt;
+ if(d<=v){a.x=a.tx+.5;a.y=a.ty+.5;const n=[[1,0],[-1,0],[0,1],[0,-1]].map(q=>[a.tx+q[0],a.ty+q[1]]).filter(q=>isRoad(q[0],q[1]));
+  if(n.length){const f=n.filter(q=>!(q[0]==a.px&&q[1]==a.py)),l=f.length?f:n,c=l[Math.random()*l.length|0];a.px=a.tx;a.py=a.ty;a.tx=c[0];a.ty=c[1]}}
+ else{a.x+=dx/d*v;a.y+=dy/d*v}}
+// ---- رسم ایزومتریک ----
+const cv=$('c'),cx=cv.getContext('2d');let W,H,DPR;
+function rs(){DPR=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR}
+const P=(x,y)=>[(x-y)*32,(x+y)*16];
+function poly(p,c){cx.beginPath();p.forEach((q,i)=>cx[i?'lineTo':'moveTo'](q[0],q[1]));cx.closePath();cx.fillStyle=c;cx.fill()}
+const sh=(h,f)=>{const n=parseInt(h.slice(1),16),g=v=>Math.min(255,v*f|0);return'rgb('+g(n>>16&255)+','+g(n>>8&255)+','+g(n&255)+')'};
+function box(x,y,w,d,h,c,z=0){const a=P(x,y),b=P(x+w,y),k=P(x+w,y+d),l=P(x,y+d),u=(p,t)=>[p[0],p[1]-z-t];
+ poly([u(l,0),u(k,0),u(k,h),u(l,h)],sh(c,.78));poly([u(k,0),u(b,0),u(b,h),u(k,h)],sh(c,.58));poly([u(a,h),u(b,h),u(k,h),u(l,h)],sh(c,1.1))}
+function roof(x,y,w,d,z,h,c){const b=P(x+w,y),k=P(x+w,y+d),l=P(x,y+d),m=P(x+w/2,y+d/2),ap=[m[0],m[1]-z-h],u=p=>[p[0],p[1]-z];poly([u(l),u(k),ap],sh(c,.9));poly([u(k),u(b),ap],sh(c,.62))}
+function king(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);
+ c.fillStyle='#5b2a86';c.beginPath();c.moveTo(-9,0);c.lineTo(9,0);c.lineTo(6,-18);c.lineTo(-6,-18);c.fill();
+ c.fillStyle='#e0a82e';c.fillRect(-6,-11,12,2.5);c.fillStyle='#fff';c.fillRect(-1,-18,2,7);
+ c.fillStyle='#e8b98a';c.beginPath();c.arc(0,-23,5,0,7);c.fill();
+ c.fillStyle='#1c1c1c';c.beginPath();c.ellipse(0,-21.5,4.6,5.5,0,0,Math.PI);c.fill();
+ c.fillStyle='#e0a82e';c.beginPath();c.moveTo(-4.8,-26);c.lineTo(-5.8,-36);c.lineTo(-2.8,-34);c.lineTo(0,-39);c.lineTo(2.8,-34);c.lineTo(5.8,-36);c.lineTo(4.8,-26);c.fill();c.restore()}
+function fig(a){const p=P(a.x,a.y);cx.fillStyle='rgba(0,0,0,.22)';cx.fillRect(p[0]-4,p[1]-1,8,2);cx.fillStyle=a.c;cx.fillRect(p[0]-3,p[1]-9,6,8);cx.fillStyle='#e8b98a';cx.fillRect(p[0]-2.5,p[1]-14,5,5);
+ if(a.s){cx.fillStyle='#8a8f98';cx.fillRect(p[0]-3,p[1]-15,6,3);cx.fillStyle='#e0a82e';cx.fillRect(p[0]+4,p[1]-17,1.5,13)}}
+function bld(x,y,t,l){
+ if(t=='house'){const h=14+l*4;box(x+.12,y+.12,.76,.76,h,'#e3b47c');roof(x+.06,y+.06,.88,.88,h,14,'#b5532f')}
+ else if(t=='farm'){const a=P(x,y);poly([a,[a[0]+32,a[1]+16],[a[0],a[1]+32],[a[0]-32,a[1]+16]],'#a9c35a');cx.strokeStyle='#6f8f2f';cx.lineWidth=3;
+  for(let k=.2;k<1;k+=.2){const p=P(x+.12,y+k),q=P(x+.88,y+k);cx.beginPath();cx.moveTo(p[0],p[1]+3);cx.lineTo(q[0],q[1]+3);cx.stroke()}
+  box(x+.7,y+.1,.2,.2,8+l*3,'#e0c25a')}
+ else if(t=='market'){box(x+.1,y+.1,.8,.8,16,'#d98a3a');box(x+.04,y+.04,.92,.92,5,'#1f9aa0',16+l*3);box(x+.3,y+.3,.4,.4,5,'#f2e6c0',21+l*3)}
+ else if(t=='mine'){box(x+.12,y+.12,.76,.76,12+l*2,'#6a5b4d');box(x+.38,y+.38,.24,.24,7,'#f2c94c',12+l*2);box(x+.1,y+.55,.2,.2,4,'#f2c94c',0)}
+ else if(t=='storage'){box(x+.1,y+.1,.8,.8,22+l*3,'#a98c63');box(x+.06,y+.06,.88,.88,4,'#7e6540',22+l*3)}
+ else if(t=='barracks'){box(x+.08,y+.08,.84,.84,26+l*3,'#9a3b2d');box(x+.04,y+.04,.92,.92,4,'#5e2018',26+l*3);const m=P(x+.5,y+.5),h=34+l*3;
+  cx.strokeStyle='#ddd';cx.lineWidth=2;cx.beginPath();cx.moveTo(m[0],m[1]-h);cx.lineTo(m[0],m[1]-h-18);cx.stroke();poly([[m[0],m[1]-h-18],[m[0]+14,m[1]-h-13],[m[0],m[1]-h-8]],'#e0a82e')}
+if(t=='workshop'){box(x+.1,y+.1,.8,.8,18+l*3,'#7a6aa8');box(x+.06,y+.06,.88,.88,4,'#463a70',18+l*3);box(x+.68,y+.14,.16,.16,14,'#555',22+l*3)}
+ const m=P(x+.5,y+.5);if(t=='house'||t=='workshop'){const T=performance.now()/1000;for(let i=0;i<3;i++){const p=(T*.4+i/3+(x*7+y*3)%5/5)%1;cx.fillStyle='rgba(235,235,235,'+.7*(1-p)+')';cx.beginPath();cx.arc(m[0]+6+p*8,m[1]-HH[t]-p*24,2+p*3,0,7);cx.fill()}}
+ for(let i=0;i<l;i++){cx.fillStyle='#ffd34d';cx.beginPath();cx.arc(m[0]+(i-(l-1)/2)*8,m[1]-HH[t]-(l+0)*0-8,3,0,7);cx.fill()}}
+function tree(x,y){box(x+.42,y+.42,.16,.16,8,'#6b4a2b');roof(x+.2,y+.2,.6,.6,8,26,'#2f7d3a');roof(x+.28,y+.28,.44,.44,22,18,'#3c9a48')}
+const nightA=()=>.45*Math.max(0,Math.sin(S.clock/180%1*6.283-1.2));
+function night(){cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='rgba(6,12,45,'+nightA()+')';cx.fillRect(0,0,W,H)}
+function palace(){
+ box(6,6,3,3,5,'#e8d9ad');box(6.1,6.1,.5,.5,52,'#e2d19a',5);roof(6.1,6.1,.5,.5,57,12,'#1f9aa0');
+ box(8.4,6.1,.5,.5,52,'#e2d19a',5);roof(8.4,6.1,.5,.5,57,12,'#1f9aa0');box(6.1,8.4,.5,.5,52,'#e2d19a',5);roof(6.1,8.4,.5,.5,57,12,'#1f9aa0');
+ box(6.5,6.5,2,2,30,'#f0e2b8',5);box(6.42,6.42,2.16,2.16,4,'#1f4fa0',22);
+ const m=P(7.5,7.5);cx.fillStyle='#e0a82e';cx.beginPath();cx.arc(m[0],m[1]-38,24,Math.PI,0);cx.fill();cx.fillStyle='#f5c95a';cx.beginPath();cx.arc(m[0]-6,m[1]-45,8,Math.PI,5);cx.fill();
+ cx.strokeStyle='#e0a82e';cx.lineWidth=2;cx.beginPath();cx.moveTo(m[0],m[1]-62);cx.lineTo(m[0],m[1]-76);cx.stroke();
+ box(8.4,8.4,.5,.5,52,'#e2d19a',5);roof(8.4,8.4,.5,.5,57,12,'#1f9aa0');const k=P(7.5,8.75);king(cx,k[0],k[1]-5,1.15)}
+function draw(){cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='#12203f';cx.fillRect(0,0,W,H);
+ cx.setTransform(DPR*cam.z,0,0,DPR*cam.z,DPR*(W/2-cam.x*cam.z),DPR*(H/2-cam.y*cam.z));const N=S.N;
+ poly([P(-1.2,-1.2),P(N+1.2,-1.2),P(N+1.2,N+1.2),P(-1.2,N+1.2)],'#1b6f8a');
+ for(let x=0;x<N;x++)for(let y=0;y<N;y++){const t=P(x,y);cx.beginPath();cx.moveTo(t[0],t[1]);cx.lineTo(t[0]+32,t[1]+16);cx.lineTo(t[0],t[1]+32);cx.lineTo(t[0]-32,t[1]+16);cx.closePath();
+  cx.fillStyle=pal(x,y)?'#eadcb0':road(x,y)?'#8d7c66':(x+y)%2?'#d6c28c':'#dcc993';cx.fill();
+  if(mode&&free(x,y)){cx.strokeStyle='rgba(31,154,160,.55)';cx.lineWidth=1.5;cx.stroke()}
+  if(selK==x+','+y){cx.strokeStyle='#ffd34d';cx.lineWidth=3;cx.stroke()}}
+ const bk={};A.concat(CA?[CA]:[]).forEach(a=>{const s=Math.floor(a.x+a.y);(bk[s]=bk[s]||[]).push(a)});
+ for(let s=0;s<=2*N-2;s++){if(s==15)palace();for(let x=Math.max(0,s-N+1);x<=Math.min(s,N-1);x++){const y=s-x,b=S.b[x+','+y];if(b)bld(x,y,b.t,b.l);else if(free(x,y)&&(x*73+y*151)%7==0)tree(x,y)}(bk[s]||[]).forEach(fig)}night()}
+// ---- رابط کاربری ----
+function hud(){const r=stats(),w=S.raid<25;$('top').innerHTML=
+ '<span class="chip">🪙 '+fa(S.gold)+'</span><span class="chip">🌾 '+fa(S.food)+' / '+fa(capR())+'</span><span class="chip">👥 '+fa(S.pop)+' / '+fa(capH())+'</span><span class="chip">⚔ '+fa(S.sol)+'</span><span class="chip">📦 '+fa(S.goods)+'</span>'+(S.car?'<span class="chip">🐪 کاروان</span>':'')+'<span class="chip">'+(nightA()>.2?'🌙':'☀')+' '+fa(S.hap)+'٪</span>'+(w?'<span class="chip w">حمله دشمن نزدیک است!</span>':'')}
+function bar(){$('bar').innerHTML='<button class="go" onclick="openK()">👑 پنل پادشاه</button>'+Object.keys(B).map(t=>'<button data-t="'+t+'" class="'+(mode==t?'on':'')+'" onclick="pick(\''+t+'\')"><i style="background:'+B[t][2]+'"></i>'+B[t][0]+'<br>'+fa(B[t][1])+' طلا</button>').join('')}
+function pick(t){mode=mode==t?null:t;selK=null;bar();info()}
+function info(){const e=$('info');
+ if(mode)e.innerHTML='<span class="t">ساخت «'+B[mode][0]+'»: '+B[mode][3]+'. روی یک زمین خالی بزنید.</span><button onclick="pick(mode)">لغو</button>';
+ else if(selK&&S.b[selK]){const b=S.b[selK],c=B[b.t][1]*(b.l+1);e.innerHTML='<span class="t"><b>'+B[b.t][0]+'</b> — سطح '+fa(b.l)+'<br>'+B[b.t][3]+'</span>'+(b.l<3?'<button class="go" onclick="upg();draw1()">ارتقا ('+fa(c)+')</button>':'')+'<button class="dn" onclick="del();draw1()">تخریب</button>'}
+ else if(selK=='palace')e.innerHTML='<span class="t"><b>قصر</b> — مرکز پادشاهی. برای مدیریت، «پنل پادشاه» را بزنید.</span>';
+ else e.innerHTML='<span class="t">'+S.log[0]+(M[S.m]?'<br>🎯 ماموریت: '+M[S.m][0]:'')+'</span>'}
+function draw1(){hud();info()}
+function openK(){$('king').style.display='flex';kp()}
+function closeK(){$('king').style.display='none'}
+function kp(){const r=stats(),nx=Math.max(0,Math.ceil(S.raid)),tx=['بدون مالیات','کم','متوسط','زیاد'];
+ $('sheet').innerHTML='<div class="hd"><canvas id="kc" width="72" height="72"></canvas><div><b>شاه بزرگ</b><p>غذا '+fa(S.food)+' · طلا '+fa(S.gold)+' · رضایت '+fa(S.hap)+'٪</p></div></div>'+
+ '<h3>مالیات</h3><div class="row">'+tx.map((t,i)=>'<button class="'+(S.tax==i?'go':'')+'" onclick="S.tax='+i+';kp()">'+t+'</button>').join('')+'</div><p>مالیات بالا طلا می‌آورد ولی رضایت مردم را کم می‌کند.</p>'+
+ '<h3>جمعیت ('+fa(S.pop)+' از '+fa(capH())+')</h3><div class="row"><button class="go" onclick="recruit();kp()">جذب ۱۰ نفر (۱۰ غذا)</button><button onclick="like();kp()">👍 لایک (+۵ غذا)</button></div><p>اگر خانه کم باشد و طلا داشته باشید، خانه جدید خودکار ساخته می‌شود.</p>'+
+ '<h3>ارتش ('+fa(S.sol)+' از '+fa(capS())+')</h3><div class="row"><button class="go" onclick="train();kp()">سربازگیری ۵ نفر (۴۰ طلا، ۱۵ غذا)</button></div><p>قدرت دفاع: '+fa(def())+' · حمله بعدی تا حدود '+fa(nx)+' ثانیه دیگر · قدرت حمله بعدی: '+fa(4+(S.wave+1)*5)+'</p>'+
+ '<h3>تجارت</h3><div class="row"><button class="go" onclick="sendCar();kp()">'+(S.car?'کاروان در راه ('+fa(S.car.t)+' ثانیه)':'فرستادن کاروان تجاری')+'</button></div><p>کالا: '+fa(S.goods)+' · قیمت بازار: '+fa(S.price*100)+'٪ قیمت پایه</p><p>کارگاه کالا می‌سازد. هر کالا حدود ۴ طلا می‌فروشد، هر سطح بازار ۱۰٪ سود می‌افزاید و ۱۵٪ احتمال غارت هست. کاروان ۳۰ ثانیه راه است.</p>'+
+ '<h3>ماموریت‌ها و دستاوردها</h3>'+M.map((m,i)=>'<p>'+(i<S.m?'✅':i==S.m?'🎯':'⬜')+' '+m[0]+' ('+fa(m[2])+' طلا)</p>').join('')+
+ '<h3>راهنما</h3><p>از نوار پایین ساختمان انتخاب کنید و روی زمین خالی بزنید. مزرعه غذا و معدن طلا می‌دهد. بازار و کارگاه تجارت را راه می‌اندازند. برای دفاع پادگان بسازید و سرباز بگیرید. پیشرفت خودکار ذخیره می‌شود.</p>'+
+ '<h3>نقشه و بازی</h3><div class="row"><button onclick="expand();kp()">گسترش نقشه (۲۵۰ طلا)</button><button onclick="save();msg(\'ذخیره شد.\');kp()">ذخیره</button><button class="dn" onclick="if(confirm(\'همه‌چیز پاک شود و بازی از نو شروع شود؟\')){S=fresh();A=[];CA=null;rl();selK=mode=null;save();bar();closeK();info()}">شروع دوباره</button></div>'+
+ '<h3>گزارش</h3>'+S.log.slice(0,5).map(l=>'<p>• '+l+'</p>').join('')+'<div class="row" style="margin-top:12px"><button onclick="closeK()">بستن</button></div>';
+ king($('kc').getContext('2d'),36,68,1.6)}
+// ---- ورودی لمسی/ماوس ----
+const ptr=new Map();let dn=null,pd=0;const dist=()=>{const p=[...ptr.values()];return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
+function zoom(f){cam.z=Math.max(.5,Math.min(2.6,cam.z*f))}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});dn={mv:0};if(ptr.size==2)pd=dist()});
+cv.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+ if(ptr.size==2){const d=dist();if(pd)zoom(d/pd);pd=d;dn.mv=99}else{cam.x-=dx/cam.z;cam.y-=dy/cam.z;dn.mv+=Math.abs(dx)+Math.abs(dy)}});
+cv.addEventListener('pointerup',e=>{if(ptr.size==1&&dn&&dn.mv<8)tap(e.clientX,e.clientY);ptr.delete(e.pointerId);pd=0});
+cv.addEventListener('pointercancel',e=>{ptr.delete(e.pointerId);pd=0});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:.9)},{passive:false});
+function tap(px,py){const wx=(px-W/2)/cam.z+cam.x,wy=(py-H/2)/cam.z+cam.y,a=wx/32,b=wy/16,x=Math.floor((a+b)/2),y=Math.floor((b-a)/2),k=x+','+y;
+ if(x<0||y<0||x>=S.N||y>=S.N){selK=null;return info()}
+ if(pal(x,y)){mode=null;selK='palace';bar()}
+ else if(S.b[k]){mode=null;selK=k;bar()}
+ else if(mode){build(x,y,mode)}
+ else selK=null;
+ info();hud()}
+// ---- حلقه اصلی ----
+function loop(n){const dt=Math.min(.25,(n-last)/1000);last=n;tick(dt);draw();hv+=dt;sv+=dt;if(hv>.3){hv=0;hud()}if(sv>5){sv=0;save()}requestAnimationFrame(loop)}
+addEventListener('resize',rs);addEventListener('visibilitychange',()=>{if(document.hidden)save()});addEventListener('pagehide',save);
+load();rs();cam.y=S.N*16;bar();info();hud();requestAnimationFrame(loop);
+</script></body></html>
