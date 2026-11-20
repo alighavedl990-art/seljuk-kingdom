@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سلجوقیان | پادشاهی ایرانی</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#17251d;color:#f5e8c8;font-family:Tahoma,Arial,sans-serif}
+header{padding:18px;text-align:center;background:#263d2e;border-bottom:3px solid #b78a3d}
+h1{margin:0;color:#f3cf78}.sub{color:#d6c39a;font-size:13px;margin-top:6px}
+main{max-width:950px;margin:auto;padding:14px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat,.panel{background:#2c4032;border:1px solid #65734e;border-radius:12px;padding:12px}
+.stat{text-align:center}.stat b{display:block;font-size:22px;color:#f4d27c;margin-top:5px}
+.city{margin:14px 0;padding:18px;border-radius:14px;background:linear-gradient(#8b9d65,#63764c 55%,#344d35);border:3px solid #b78a3d;min-height:210px;text-align:center}
+.castle{font-size:68px}.buildings{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;font-size:35px;margin-top:12px}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}
+button{border:0;border-radius:9px;padding:12px;background:#c69a4b;color:#241b0c;font-weight:bold;font-size:14px}
+button:active{transform:scale(.98)}input{width:100%;padding:11px;border-radius:8px;border:1px solid #b78a3d;background:#17251d;color:white;margin:6px 0}
+small{color:#d7c9a9}.notice{margin-top:10px;min-height:24px;color:#f4d27c}
+@media(max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style></head>
+<body>
+<header><h1>⚔️ پادشاهی سلجوقیان ⚔️</h1><div class="sub">سرزمینت را آباد کن، مردم را گرد آور و فرمانروایی کن</div></header>
+<main>
+<div class="stats">
+<div class="stat">👥 جمعیت<b id="population">۱۰</b></div><div class="stat">🌾 غذا<b id="food">۱۰۰</b></div>
+<div class="stat">🪙 طلا<b id="gold">۵۰</b></div><div class="stat">😊 رضایت<b id="happiness">۸۰٪</b></div>
+</div>
+<section class="city"><div class="castle">🏰</div><b>کاخ شاهنشاهی</b><div class="buildings" id="buildings">🏠 🌾 🏘️</div></section>
+<section class="panel"><h3>فرمان‌های پادشاه</h3><div class="actions">
+<button onclick="act('farm')">🌾 ساخت مزرعه (۲۰ طلا)</button>
+<button onclick="act('house')">🏠 ساخت خانه (۱۵ طلا)</button>
+<button onclick="act('market')">🏬 ساخت بازار (۳۰ طلا)</button>
+<button onclick="act('invite')">👥 دعوت ۱۰ نفر (۲۰ غذا)</button>
+<button onclick="act('tax')">🪙 دریافت مالیات (+۱۰ طلا)</button>
+<button onclick="act('like')">❤️ لایک شهر (+۵ غذا)</button>
+</div><p class="notice" id="notice">به پادشاهی خود خوش آمدی!</p></section>
+<section class="panel" style="margin-top:12px"><h3>🔐 پنل فرمانروای پادشاه</h3><small>کلید پادشاه را فقط خودت نگه دار. برای فرمان‌های مدیریتی لازم است.</small><input id="key" type="password" placeholder="کلید پادشاه (KING_KEY)"><button onclick="saveKey()">ثبت کلید در این دستگاه</button></section>
+</main>
+<script>
+const fa=n=>Number(n||0).toLocaleString('fa-IR');
+let state={population:10,food:100,gold:50,happiness:80,buildings:['🏠','🌾','🏘️']};
+let kingKey=localStorage.getItem('seljuk_key')||'';
+document.getElementById('key').value=kingKey;
+function render(){for(const k of ['population','food','gold','happiness'])document.getElementById(k).textContent=fa(state[k])+(k==='happiness'?'٪':'');document.getElementById('buildings').textContent=state.buildings.join(' ')}
+function msg(t){document.getElementById('notice').textContent=t}
+function saveKey(){kingKey=document.getElementById('key').value.trim();localStorage.setItem('seljuk_key',kingKey);msg('کلید در همین دستگاه ذخیره شد.')}
+async function load(){try{let r=await fetch('/api/state');if(r.ok)state=await r.json();render()}catch(e){render()}}
+async function act(action){try{let r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json','x-king-key':kingKey},body:JSON.stringify({action})});let d=await r.json();if(!r.ok)throw Error(d.error||'خطا');state=d;render();msg('فرمان اجرا شد.')}catch(e){if(action==='like'){state.food+=5;render();msg('۵ واحد غذا اضافه شد (حالت نمایشی).')}else msg(e.message+' — ابتدا سایت را روی Netlify منتشر کن.');}}
+load();
+</script></body></html>
