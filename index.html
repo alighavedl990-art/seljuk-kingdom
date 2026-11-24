@@ -1,62 +1,11 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#182b25">
-  <meta name="description" content="بازی شهرسازی پادشاهی سلجوقیان">
-  <title>پادشاهی سلجوقیان</title>
-  <link rel="stylesheet" href="src/style.css">
-</head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand"><span class="brand-mark">✦</span><div><h1>پادشاهی سلجوقیان</h1><small>شهر خود را بسازید، آباد کنید و از آن دفاع کنید</small></div></div>
-      <div class="top-actions"><span id="seasonLabel" class="season">بهار · سال ۱</span><button id="soundBtn" class="icon-btn" aria-label="صدا">♪</button><button id="resetBtn" class="icon-btn danger" title="شروع دوباره">↻</button></div>
-    </header>
-    <section class="resource-bar" aria-label="منابع پادشاهی">
-      <div class="resource"><span>🍞</span><div><small>غذا</small><b id="food">650</b></div></div>
-      <div class="resource"><span>🪙</span><div><small>طلا</small><b id="gold">420</b></div></div>
-      <div class="resource"><span>👥</span><div><small>جمعیت</small><b id="population">32 / 60</b></div></div>
-      <div class="resource"><span>⚔️</span><div><small>سرباز</small><b id="soldiers">8</b></div></div>
-      <div class="resource"><span>🛡️</span><div><small>امنیت</small><b id="security">70٪</b></div></div>
-    </section>
-    <main class="game-layout">
-      <section class="world-panel">
-        <div class="world-heading"><div><strong>نقشه شهر</strong><small>روی زمین خالی بزنید و ساختمان انتخاب‌شده را بسازید</small></div><div class="zoom-controls"><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div>
-        <div class="canvas-wrap"><canvas id="world" aria-label="نقشه ایزومتریک شهر"></canvas><div class="map-hint">برای ساخت، ابتدا یک بنا از فهرست انتخاب کنید</div></div>
-        <div class="world-footer"><span id="clockLabel">روز ۱ · ۰۸:۰۰</span><span id="saveLabel">ذخیره خودکار فعال است</span><button id="pauseBtn" class="small-btn">توقف زمان</button></div>
-      </section>
-      <aside class="sidebar">
-        <section class="card build-card">
-          <div class="section-title"><h2>ساخت‌وساز</h2><span class="tag">شهرسازی</span></div>
-          <p class="muted">ساختمان را انتخاب کنید، سپس روی خانه‌ای خالی در نقشه بزنید.</p>
-          <div id="buildingList" class="building-list"></div>
-          <button id="cancelBuild" class="text-btn">لغو انتخاب ساختمان</button>
-        </section>
-        <section class="card command-card">
-          <div class="section-title"><h2>فرمان‌های پادشاه</h2><span class="tag gold-tag">دربار</span></div>
-          <div class="command-grid">
-            <button id="taxBtn"><span>🪙</span><b>اخذ مالیات</b><small>درآمد فوری از مردم</small></button>
-            <button id="recruitBtn"><span>⚔️</span><b>سربازگیری</b><small>۵۰ طلا + ۳۰ غذا</small></button>
-            <button id="defendBtn"><span>🛡️</span><b>تقویت دفاع</b><small>هزینه ۸۰ طلا</small></button>
-            <button id="marketBtn"><span>⚖️</span><b>دادوستد</b><small>تبدیل طلا و غذا</small></button>
-            <button id="likeBtn"><span>❤️</span><b>حمایت مردمی</b><small>هر لایک +۵ غذا · <span id="likesCount">۰</span> لایک</small></button>
-          </div>
-        </section>
-        <section class="card status-card">
-          <div class="section-title"><h2>گزارش شهر</h2><span class="live-dot">زنده</span></div>
-          <div class="stat-line"><span>تولید غذا</span><b id="foodRate">۰ / دقیقه</b></div>
-          <div class="stat-line"><span>تولید طلا</span><b id="goldRate">۰ / دقیقه</b></div>
-          <div class="stat-line"><span>ظرفیت انبار</span><b id="storage">۱٬۰۰۰</b></div>
-          <div class="stat-line"><span>نیروی کار فعال</span><b id="workers">۰ نفر</b></div>
-          <div id="log" class="log" aria-live="polite">پادشاهی شما آماده آبادانی است.</div>
-        </section>
-      </aside>
-    </main>
-    <footer>پادشاهی سلجوقیان <span>نسخه آزمایشی قابل‌بازی · ذخیره روی همین دستگاه</span></footer>
-  </div>
-  <div id="toast" class="toast" role="status"></div>
-  <script src="src/game.js"></script>
-</body>
-</html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#17151a"><title>پادشاهی سلجوقیان</title><link rel="stylesheet" href="src/style.css"></head>
+<body><main class="game">
+<header class="hud"><section class="resources"><div class="meter"><b id="energy">۱۲۰</b><span class="bar"><i></i></span><strong>⚡</strong><b id="gold">۴۰٬۴۰۹</b> 🪙</div><div class="people">👥 <b id="population">۱۲۰</b>　👑 پایه ۵　🏙️ <b id="city">یزد</b></div><div class="weather">☀️ <span id="weather">آفتابی</span> · <span id="clock">۱۸:۵۴</span></div></section>
+<section class="king"><div><b>سلطان ملکشاه</b><small>خزانه‌دار · بزرگ و نانو</small></div><span class="king-avatar">♟️</span></section></header>
+<aside class="minimap"><canvas id="mini" width="160" height="112"></canvas><b>شهر یزد</b></aside>
+<nav class="right-menu"><button data-tab="gift"><span>🎁</span>امروز</button><button data-tab="sound"><span>🔇</span>بی‌صدا</button><button data-tab="weather"><span>🌧️</span>آب‌وهوا</button><button data-tab="mail"><span>✉️</span>نامه</button><button data-tab="book"><span>📖</span>دانشنامه</button></nav>
+<section class="scene"><canvas id="world"></canvas><div class="name-tag">سلطان ملکشاه</div><div class="rain" id="rain"></div><div class="mobile-pad"><button data-move="up">▲</button><div><button data-move="left">◀</button><button data-move="down">▼</button><button data-move="right">▶</button></div></div></section>
+<nav class="bottom-menu"><button class="active" data-tab="court"><span>📜</span>دربار</button><button data-tab="me"><span>👤</span>من</button><button data-tab="cities"><span>🚩</span>شهرها</button><button data-tab="news"><span>📖</span>خبرها</button><button data-tab="bag"><span>👜</span>کوله</button><button data-tab="chat"><span>💬</span>گفتگو</button></nav>
+<div class="dialog" id="dialog"><div class="dialog-box"><button id="closeDialog">✕</button><h2 id="dialogTitle">دربار</h2><p id="dialogText">به شهر یزد خوش آمدید، سلطان.</p><div id="dialogActions"></div></div></div>
+</main><script src="src/game.js"></script></body></html>
