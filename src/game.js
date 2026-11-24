@@ -26,6 +26,7 @@ function workersNeeded(){return state.buildings.reduce((n,b)=>n+(defs[b.type]?.w
 function activeWorkers(){return Math.min(Math.max(0,state.pop-8),workersNeeded());}
 function rates(){const farms=count("farm"),mines=count("mine"),workers=activeWorkers(),needed=workersNeeded();const ratio=needed?Math.min(1,workers/needed):0;return {food:farms*18*ratio,gold:mines*11*ratio};}
 function updateUI(){
+ if($("likesCount"))$("likesCount").textContent=fmt(state.likes||0);
  $("food").textContent=fmt(state.food);$("gold").textContent=fmt(state.gold);$("population").textContent=`${fmt(state.pop)} / ${fmt(capacity())}`;$("soldiers").textContent=fmt(state.soldiers);$("security").textContent=fmt(state.security)+"٪";
  const r=rates();$("foodRate").textContent=fmt(r.food)+" / دقیقه";$("goldRate").textContent=fmt(r.gold)+" / دقیقه";$("workers").textContent=fmt(activeWorkers())+" نفر";$("storage").textContent=fmt(1000+count("storage")*500);
  $("seasonLabel").textContent=(state.day<31?"بهار":state.day<61?"تابستان":state.day<91?"پاییز":"زمستان")+" · سال "+fmt(Math.floor((state.day-1)/120)+1);
