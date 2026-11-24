@@ -1,1 +1,61 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>سلجوقیان</title><link rel="stylesheet" href="src/style.css"></head><body><header><h1>👑 سلجوقیان</h1><span>پادشاهی ایرانی</span></header><main><section class="stats"><div>🍞 نان <b id="food">500</b></div><div>🪙 طلا <b id="gold">250</b></div><div>👥 جمعیت <b id="people">20</b></div><div>🏠 خانه <b id="homes">2</b></div></section><section class="city"><div class="mountains">☀️　🏔️　🏔️</div><div class="town">🏰　🏠　🌾　🏪</div><div class="people">🧑‍🌾　👨‍🌾　👩‍🌾　👨‍👩‍👧</div></section><section class="panel"><h2>فرمان‌های پادشاه</h2><button id="farm">برداشت محصول +۵۰ نان</button><button id="tax">مالیات +۲۰ طلا</button><button id="recruit">جذب ۵ نفر (۵۰ نان)</button><button id="house">ساخت خانه (۱۰۰ نان)</button><p id="message">به پادشاهی خود خوش آمدید.</p></section><p class="note">نسخه نمونه: منابع فعلاً محلی هستند و ذخیره دائمی سروری ندارند.</p></main><script src="src/game.js"></script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#182b25">
+  <meta name="description" content="بازی شهرسازی پادشاهی سلجوقیان">
+  <title>پادشاهی سلجوقیان</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">✦</span><div><h1>پادشاهی سلجوقیان</h1><small>شهر خود را بسازید، آباد کنید و از آن دفاع کنید</small></div></div>
+      <div class="top-actions"><span id="seasonLabel" class="season">بهار · سال ۱</span><button id="soundBtn" class="icon-btn" aria-label="صدا">♪</button><button id="resetBtn" class="icon-btn danger" title="شروع دوباره">↻</button></div>
+    </header>
+    <section class="resource-bar" aria-label="منابع پادشاهی">
+      <div class="resource"><span>🍞</span><div><small>غذا</small><b id="food">650</b></div></div>
+      <div class="resource"><span>🪙</span><div><small>طلا</small><b id="gold">420</b></div></div>
+      <div class="resource"><span>👥</span><div><small>جمعیت</small><b id="population">32 / 60</b></div></div>
+      <div class="resource"><span>⚔️</span><div><small>سرباز</small><b id="soldiers">8</b></div></div>
+      <div class="resource"><span>🛡️</span><div><small>امنیت</small><b id="security">70٪</b></div></div>
+    </section>
+    <main class="game-layout">
+      <section class="world-panel">
+        <div class="world-heading"><div><strong>نقشه شهر</strong><small>روی زمین خالی بزنید و ساختمان انتخاب‌شده را بسازید</small></div><div class="zoom-controls"><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div>
+        <div class="canvas-wrap"><canvas id="world" aria-label="نقشه ایزومتریک شهر"></canvas><div class="map-hint">برای ساخت، ابتدا یک بنا از فهرست انتخاب کنید</div></div>
+        <div class="world-footer"><span id="clockLabel">روز ۱ · ۰۸:۰۰</span><span id="saveLabel">ذخیره خودکار فعال است</span><button id="pauseBtn" class="small-btn">توقف زمان</button></div>
+      </section>
+      <aside class="sidebar">
+        <section class="card build-card">
+          <div class="section-title"><h2>ساخت‌وساز</h2><span class="tag">شهرسازی</span></div>
+          <p class="muted">ساختمان را انتخاب کنید، سپس روی خانه‌ای خالی در نقشه بزنید.</p>
+          <div id="buildingList" class="building-list"></div>
+          <button id="cancelBuild" class="text-btn">لغو انتخاب ساختمان</button>
+        </section>
+        <section class="card command-card">
+          <div class="section-title"><h2>فرمان‌های پادشاه</h2><span class="tag gold-tag">دربار</span></div>
+          <div class="command-grid">
+            <button id="taxBtn"><span>🪙</span><b>اخذ مالیات</b><small>درآمد فوری از مردم</small></button>
+            <button id="recruitBtn"><span>⚔️</span><b>سربازگیری</b><small>۵۰ طلا + ۳۰ غذا</small></button>
+            <button id="defendBtn"><span>🛡️</span><b>تقویت دفاع</b><small>هزینه ۸۰ طلا</small></button>
+            <button id="marketBtn"><span>⚖️</span><b>دادوستد</b><small>تبدیل طلا و غذا</small></button>
+          </div>
+        </section>
+        <section class="card status-card">
+          <div class="section-title"><h2>گزارش شهر</h2><span class="live-dot">زنده</span></div>
+          <div class="stat-line"><span>تولید غذا</span><b id="foodRate">۰ / دقیقه</b></div>
+          <div class="stat-line"><span>تولید طلا</span><b id="goldRate">۰ / دقیقه</b></div>
+          <div class="stat-line"><span>ظرفیت انبار</span><b id="storage">۱٬۰۰۰</b></div>
+          <div class="stat-line"><span>نیروی کار فعال</span><b id="workers">۰ نفر</b></div>
+          <div id="log" class="log" aria-live="polite">پادشاهی شما آماده آبادانی است.</div>
+        </section>
+      </aside>
+    </main>
+    <footer>پادشاهی سلجوقیان <span>نسخه آزمایشی قابل‌بازی · ذخیره روی همین دستگاه</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="src/game.js"></script>
+</body>
+</html>
